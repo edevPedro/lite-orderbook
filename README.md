@@ -10,11 +10,16 @@ This is a **study project**, not production software. The goal is to explore:
 
 ### What’s here
 
-- `Order`, `OrderModify`, `Trade`, and level abstractions in `main.cpp`.
-- Basic scaffolding for an `Orderbook` class and matching logic.
-- A minimal `main` entry point just to make the project build.
+- **Order types**: `Order` (with `OrderType::GoodTillCancel` and `OrderType::FillAndKill`), `OrderModify`, `Trade`.
+- **Level abstractions**: `LevelInfo` (price/quantity pairs), `OrderbookLevelInfos` (bid/ask snapshot).
+- **Orderbook**: price-level map (bid/ask sides) with order matching logic (`MatchOrders`, `AddOrder`, `CancelOrder`).
+- **Data structures**:
+  - Bids: `std::map<Price, OrderPointers, std::greater<Price>>` (descending order)
+  - Asks: `std::map<Price, OrderPointers, std::less<Price>>` (ascending order)
+  - Orders: `std::list<OrderPointer>` for O(1) insert/remove at any position
+  - Order lookup: `std::unordered_map<OrderId, OrderEntry>` for O(1) by ID
 
-This code is intentionally small and focused so it’s easy to read and refactor as ideas evolve.
+This code is intentionally small and focused so it's easy to read and refactor as ideas evolve.
 
 ### Building
 
