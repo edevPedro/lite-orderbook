@@ -65,10 +65,8 @@ cmake --build build
 ctest --test-dir build
 ```
 
-### Status and scope
+### Status 
 
-- **Educational only**: no guarantees about correctness, performance, or safety.
-- **Work in progress**: interfaces and data structures will change as I experiment.
-- **Out of scope**: networking, persistence, risk checks, and exchange connectivity.
+- **Work in progress**: benchmarking and FIX connectivity are next.
 
 If you are reading this to learn: treat it as a sandbox for ideas, not a reference implementation.
