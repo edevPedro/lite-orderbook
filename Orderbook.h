@@ -1,8 +1,11 @@
 #pragma once
 
+#include <atomic>
 #include <condition_variable>
+#include <future>
 #include <map>
 #include <mutex>
+#include <queue>
 #include <thread>
 #include <unordered_map>
 
@@ -30,6 +33,10 @@ private:
     };
   };
 
+  struct MatchRequest {
+    std::promise<Trades> promise_;
+  };
+
   std::unordered_map<Price, LevelData> data_;
   std::map<Price, OrderPointers, std::greater<Price>> bids_;
   std::map<Price, OrderPointers, std::less<Price>> asks_;
@@ -37,6 +44,10 @@ private:
   mutable std::mutex ordersMutex_;
   std::thread ordersPruneThread_;
   std::condition_variable shutdownConditionVariable_;
+  std::mutex matchMutex_;
+  std::condition_variable matchConditionVariable_;
+  std::queue<MatchRequest> matchRequests_;
+  std::thread matchThread_;
   std::atomic<bool> shutdown_{false};
 
   void PruneGoodForDayOrders();
@@ -59,6 +70,10 @@ private:
   bool CanMatch(Side side, Price price) const;
 
   Trades MatchOrders();
+
+  void RunMatching();
+
+  Trades RequestMatch();
 
 public:
   Orderbook();

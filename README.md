@@ -8,18 +8,42 @@ This is a **study project**, not production software. The goal is to explore:
 - **Market microstructure basics**: bids/asks, levels, trades, and order matching.
 - **Design iterations**: trying out different ways to model an order book and its API.
 
-### What’s here
+### Features
 
-- **Order types**: `Order` (with `OrderType::GoodTillCancel` and `OrderType::FillAndKill`), `OrderModify`, `Trade`.
-- **Level abstractions**: `LevelInfo` (price/quantity pairs), `OrderbookLevelInfos` (bid/ask snapshot).
-- **Orderbook**: price-level map (bid/ask sides) with order matching logic (`MatchOrders`, `AddOrder`, `CancelOrder`).
+- **Order types**: `OrderType::GoodTillCancel`, `FillAndKill`, `FillOrKill`, `GoodForDay`, `Market`.
+- **Matching engine**: price-time priority with partial fills and trade generation.
+- **Order lifecycle**: add, cancel, and modify with in-book lookup by id.
+- **Concurrency**: dedicated matching thread with a synchronized request queue.
+- **Modular design**: separate types for orders, trades, and book snapshots.
+
+### Architecture overview
+
+- **Orderbook**: maintains bid/ask price levels and matches crossing orders.
+- **Level snapshot**: `OrderbookLevelInfos` exposes bid/ask levels for inspection.
 - **Data structures**:
-  - Bids: `std::map<Price, OrderPointers, std::greater<Price>>` (descending order)
-  - Asks: `std::map<Price, OrderPointers, std::less<Price>>` (ascending order)
-  - Orders: `std::list<OrderPointer>` for O(1) insert/remove at any position
-  - Order lookup: `std::unordered_map<OrderId, OrderEntry>` for O(1) by ID
+  - Bids: `std::map<Price, OrderPointers, std::greater<Price>>` (descending)
+  - Asks: `std::map<Price, OrderPointers, std::less<Price>>` (ascending)
+  - Orders: `std::list<OrderPointer>` for O(1) insert/remove
+  - Order lookup: `std::unordered_map<OrderId, OrderEntry>` for O(1) by id
 
-This code is intentionally small and focused so it's easy to read and refactor as ideas evolve.
+### Concurrency model
+
+Order matching runs on a dedicated thread. Public APIs (`AddOrder`, `CancelOrder`,
+`ModifyOrder`) update the book under a mutex and enqueue a match request. The
+matching thread consumes requests from a `std::mutex` + `std::condition_variable`
+queue and executes `MatchOrders()` safely. Each API waits for the matching
+result before returning.
+
+### Example
+
+```cpp
+Orderbook orderbook;
+auto buy = std::make_shared<Order>(OrderType::GoodTillCancel, 1, Side::Buy, 100, 10);
+auto sell = std::make_shared<Order>(OrderType::GoodTillCancel, 2, Side::Sell, 100, 5);
+
+orderbook.AddOrder(buy);
+auto trades = orderbook.AddOrder(sell);
+```
 
 ### Building
 
@@ -31,13 +55,20 @@ g++ -std=c++20 main.cpp -o oms-cpp
 ./oms-cpp
 ```
 
-You can of course plug this into your favorite build system later (CMake, Meson, etc.).
+### Tests
+
+The tests use GoogleTest and are wired through CMake.
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build
+```
 
 ### Status and scope
 
 - **Educational only**: no guarantees about correctness, performance, or safety.
 - **Work in progress**: interfaces and data structures will change as I experiment.
-- **Out of scope (for now)**: networking, persistence, risk checks, and real exchange connectivity.
+- **Out of scope**: networking, persistence, risk checks, and exchange connectivity.
 
-If you’re reading this to learn: treat it as a sandbox for ideas, not a reference implementation.
-
+If you are reading this to learn: treat it as a sandbox for ideas, not a reference implementation.
